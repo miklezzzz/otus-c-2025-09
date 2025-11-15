@@ -49,6 +49,7 @@ void list_recursively(GFile *dir, GtkTreeStore* tree_store, GtkTreeIter* iter, G
 				}
 				sprintf(enhanced_path, "└%s", path);
 				add_row_to_tree(tree_store, iter, parent, enhanced_path);
+				free(enhanced_path);
 				break;
 			case G_FILE_TYPE_SYMBOLIC_LINK: {
 				const char* target_path = g_file_info_get_symlink_target(file_info);
@@ -59,6 +60,7 @@ void list_recursively(GFile *dir, GtkTreeStore* tree_store, GtkTreeIter* iter, G
 				}
 				sprintf(enhanced_path, "└%s -> %s", path, target_path);
 				add_row_to_tree(tree_store, iter, parent, enhanced_path);
+				free(enhanced_path);
 				break;
 			}
 			case G_FILE_TYPE_DIRECTORY:
@@ -70,6 +72,7 @@ void list_recursively(GFile *dir, GtkTreeStore* tree_store, GtkTreeIter* iter, G
 					}
 					sprintf(enhanced_path, "└%s", path);
 					add_row_to_tree(tree_store, iter, parent, enhanced_path);
+					free(enhanced_path);
 					GtkTreeIter new_iter;
 					list_recursively(child_file, tree_store, &new_iter, iter, error);
 				}
@@ -77,9 +80,7 @@ void list_recursively(GFile *dir, GtkTreeStore* tree_store, GtkTreeIter* iter, G
 			default:
 				break;
 		}
-		if (enhanced_path != NULL) {
-			free(enhanced_path);
-		}
+
 		g_free(path);
 
 		g_object_unref(file_info);
