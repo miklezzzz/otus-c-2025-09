@@ -17,30 +17,30 @@
 #define PORT_STR "23"
 #define BUF_SIZE 16000
 
-const char* command = "figlet";
 static char buffer[BUF_SIZE];
-const char* str_to_find = "Press control-C to interrupt any command.";
-const char str_to_find2[3] = "\n.";
+const char* telnet_command = "figlet";
+const char* string_to_find = "Press control-C to interrupt any command.";
+const char string_to_find2[3] = "\n.";
 
-int string_has_suffix(char* str, int offset, int length, const char* suffix) {
+int string_has_substring(char* string, int offset, int length, const char* substring) {
 	int j = 0;
 	for (int i = offset; i < offset + length; i++) {
-		if ((unsigned char)str[i] == 255) {
+		if ((unsigned char)string[i] == 255) {
 			i += 2;
 			continue;
 		}
 
-		if ((strlen(str)-1-i) < (strlen(suffix)-1-j)) {
+		if ((length-i) < ((int)strlen(substring)-1-j)) {
 			return 0;
 		}
 
-		if (str[i] == suffix[j]) {
+		if (string[i] == substring[j]) {
 			j += 1;
 		} else {
 			j = 0;
 		}
 
-		if ((j == (int)strlen(suffix)-1)) {
+		if ((j == (int)strlen(substring)-1)) {
 			return 1;
 		}
 	}
@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
 	}
 
 	while ((r = recv(sock_fd, buffer, BUF_SIZE - 1, 0)) > 0) {
-		if (string_has_suffix((char*)buffer, 0, r, str_to_find)) {
+		if (string_has_substring((char*)buffer, 0, r, string_to_find)) {
 			break;
 		}
 	}
@@ -145,7 +145,7 @@ int main(int argc, char** argv) {
 	}
 
 	char full_command[4096];
-	int res = snprintf(full_command, sizeof(full_command), "%s /%s %s\n\r", command, argv[2], argv[3]);
+	int res = snprintf(full_command, sizeof(full_command), "%s /%s %s\n\r", telnet_command, argv[2], argv[3]);
 	if (res < 0) {
 		printf("failed to concatenate strings");
 		exit_code = EXIT_FAILURE;
@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
 
 	int len = 0;
 	while ((r = recv(sock_fd, &buffer[len], BUF_SIZE - len, 0)) > 0) {
-		if (string_has_suffix((char*)buffer, len, r, str_to_find2)) {
+		if (string_has_substring((char*)buffer, len, r, string_to_find2)) {
 			break;
 		}
 		len += r;
