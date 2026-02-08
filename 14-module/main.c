@@ -4,11 +4,12 @@
 #include <linux/cdev.h>
 #include <linux/types.h>
 #include <linux/slab.h>
+#include <linux/ioctl.h>
 
 #define DEVICE_NAME "ring_buffer"
 #define CLASS_NAME "ring_buffer"
 #define IOCTL_MAGIC 'N'
-#define IOCTL_SET_MSG _IOW(IOCTL_MAGIC, 0, char*)
+#define IOCTL_WIPE_RB _IO(IOCTL_MAGIC, 0)
 #define DEFAULT_SIZE 16
 
 MODULE_LICENSE("GPL");
@@ -100,9 +101,21 @@ static ssize_t rb_write(struct file* file, const char __user* user_buf, size_t c
 	return count;
 }
 
-// ioctl disabled
+// ioctl - lazily wipes the ring buffer
 static long rb_ioctl(struct file* file, unsigned int cmd, unsigned long arg) {
-	return -EINVAL;
+	if (cmd != IOCTL_WIPE_RB) {
+		return -EINVAL;
+	}
+
+	if (mutex_lock_interruptible(&rb->lock)) {
+		return -ERESTARTSYS;
+	}
+
+	rb->head = rb->tail = rb->count = 0;
+	mutex_unlock(&rb->lock);
+	printk(KERN_WARNING "Ring buffer was wiped out\n");
+
+	return 0;
 }
 
 static const struct file_operations fops = {
