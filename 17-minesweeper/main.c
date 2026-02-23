@@ -41,7 +41,7 @@ int finalTimeInSeconds = 0;
 // fills the field with mines
 void initGame(int mineCount) {
 	gameOver = false;
-       	gameWon = false;
+	gameWon = false;
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			grid[i][j] = (Cell){0};
@@ -133,6 +133,7 @@ void addScore(const char* name, int score) {
 			for (int j = 4; j > i; j--) {
 				topPlayers[j] = topPlayers[j-1];
 			}
+
 			strcpy(topPlayers[i].name, name);
 			topPlayers[i].score = score;
 
@@ -177,8 +178,7 @@ int main() {
 					       	minesToPlace = 15;
 					} else if (CheckCollisionPointRec(mousePosition, (Rectangle){ 80, 240, 240, 50 })) { 
 						minesToPlace = 20;
-					}
-					else {
+					} else {
 					       	break;
 					}
 					
@@ -254,7 +254,9 @@ int main() {
 					currentState = STATE_HIGHSCORES;
 					playerName[0] = '\0'; letterCount = 0;
 				}
-			} break;
+
+				break;
+			}
 
 			case STATE_HIGHSCORES:
 				if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(mousePosition, (Rectangle){ 80, 320, 240, 50 })) {
@@ -277,8 +279,7 @@ int main() {
 			       	DrawText("START GAME", 135, 155, 20, BLACK);
 				DrawRectangleRec((Rectangle){ 80, 210, 240, 50 }, LIGHTGRAY);
 			       	DrawText("TOP PLAYERS", 135, 225, 20, BLACK);
-			} 
-			else if (currentState == STATE_DIFFICULTY) {
+			} else if (currentState == STATE_DIFFICULTY) {
 				DrawText("SELECT DIFFICULTY", 65, 40, 25, DARKGRAY);
 				DrawRectangleRec((Rectangle){ 80, 100, 240, 50 }, GREEN);
 			       	DrawText("EASY (10)", 145, 115, 20, WHITE);
@@ -286,8 +287,7 @@ int main() {
 			       	DrawText("NORMAL (15)", 135, 185, 20, WHITE);
 				DrawRectangleRec((Rectangle){ 80, 240, 240, 50 }, RED);
 			       	DrawText("HARD (20)", 145, 255, 20, WHITE);
-			}
-			else if (currentState == STATE_GAME) {
+			} else if (currentState == STATE_GAME) {
 				for (int i = 0; i < COLS; i++) {
 					for (int j = 0; j < ROWS; j++) {
 						Rectangle dest = { i * CELL_SIZE, j * CELL_SIZE, CELL_SIZE - 2, CELL_SIZE - 2 };
@@ -318,16 +318,19 @@ int main() {
 				}
 
 			} else if (currentState == STATE_INPUT) {
-				 DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.8f));
-				 DrawText("YOU WON!", 140, 50, 30, GREEN);
-				 DrawText("ENTER YOUR NAME:", 110, 130, 15, RAYWHITE);
-				 DrawRectangle(80, 160, 240, 50, RAYWHITE);
-				 DrawText(playerName, 95, 175, 25, MAROON);
+				DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.8f));
+				DrawText("YOU WON!", 140, 50, 30, GREEN);
+				DrawText("ENTER YOUR NAME:", 110, 130, 15, RAYWHITE);
+				DrawRectangle(80, 160, 240, 50, RAYWHITE);
+				DrawText(playerName, 95, 175, 25, MAROON);
 			} else if (currentState == STATE_HIGHSCORES) {
-				 DrawText("TOP PLAYERS", 80, 40, 30, DARKGRAY);
-				 for (int i = 0; i < 5; i++) DrawText(TextFormat("%d. %s - %d pts", i+1, topPlayers[i].name, topPlayers[i].score), 80, 100 + (i*40), 20, BLACK);
-				 DrawRectangleRec((Rectangle){ 80, 320, 240, 50 }, LIGHTGRAY);
-				 DrawText("BACK", 175, 335, 20, BLACK);
+				DrawText("TOP PLAYERS", 80, 40, 30, DARKGRAY);
+				for (int i = 0; i < 5; i++) {
+					 DrawText(TextFormat("%d. %s - %d pts", i+1, topPlayers[i].name, topPlayers[i].score), 80, 100 + (i*40), 20, BLACK);
+				}
+
+				DrawRectangleRec((Rectangle){ 80, 320, 240, 50 }, LIGHTGRAY);
+				DrawText("BACK", 175, 335, 20, BLACK);
 			}
 		EndDrawing();
 	}
