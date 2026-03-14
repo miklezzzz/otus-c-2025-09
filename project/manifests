@@ -1,0 +1,193 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: default
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  serviceName: postgres-db
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - args:
+        - postgres
+        - -c
+        - config_file=/etc/postgresql/postgresql.conf
+        - -c
+        - unix_socket_directories=/tmp
+        - -c
+        - hba_file=/etc/postgresql/pg_hba.conf
+        command:
+        - docker-entrypoint.sh
+        env:
+        - name: POSTGRES_PASSWORD
+          value: "1234567"
+        - name: POSTGRES_K8S_POD_CIDR
+          value: 10.112.0.0/16
+        - name: POSTGRES_K8S_INSTANCE_ID
+          value: default
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        image: miklezzzz/postgresql-18:latest
+        imagePullPolicy: Always
+        name: postgres
+        ports:
+        - containerPort: 5432
+          protocol: TCP
+        resources: {}
+        securityContext:
+          runAsGroup: 999
+          runAsNonRoot: true
+          runAsUser: 999
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: pg-data
+        - mountPath: /etc/postgresql/postgresql.conf
+          name: config
+          subPath: postgresql.conf
+        - mountPath: /etc/postgresql/pg_hba.conf
+          name: hba-volume
+          subPath: pg_hba.conf
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 999
+      serviceAccount: postgres
+      serviceAccountName: postgres
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: pg-configs
+        name: hba-volume
+      - configMap:
+          defaultMode: 420
+          name: postgres-config
+        name: config
+  updateStrategy:
+    rollingUpdate:
+      partition: 0
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      creationTimestamp: null
+      name: pg-data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+      volumeMode: Filesystem
+    status:
+      phase: Pending
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: postgres
+  name: postgres-db
+  namespace: default
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    app: postgres
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+  name: postgres-config
+  namespace: default
+data:
+  postgresql.conf: |
+    shared_preload_libraries = 'auth_k8s'
+    io_method = 'io_uring'
+    effective_io_concurrency = 200
+    listen_addresses = '*'
+    max_connections = 100
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: postgres-client
+  name: postgres-client
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 10
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: postgres-client
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+        otus.project.postgres.instance/default: "true"
+      labels:
+        app: postgres-client
+    spec:
+      containers:
+      - command:
+        - /bin/bash
+        - -c
+        - sleep infinity
+        image: postgres:18-alpine
+        imagePullPolicy: IfNotPresent
+        name: postgres
+        readinessProbe:
+          exec:
+            command:
+            - psql
+            - -h
+            - postgres-db.default.svc.internal-cluster.local
+            - -U
+            - postgres
+            - -d
+            - postgres
+            - -c
+            - SELECT 1
+          failureThreshold: 3
+          initialDelaySeconds: 1
+          periodSeconds: 3
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 3
