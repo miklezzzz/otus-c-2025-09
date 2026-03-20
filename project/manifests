@@ -15,7 +15,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: postgres
-  namespace: <>
+  namespace: psql
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -64,7 +64,7 @@ spec:
         - name: POSTGRES_PASSWORD
           value: "1234567"
         - name: POSTGRES_K8S_POD_CIDR
-          value: 10.112.0.0/16
+          value: 10.111.0.0/16
         - name: POSTGRES_K8S_INSTANCE_ID
           value: default
         - name: PGDATA
@@ -181,6 +181,7 @@ spec:
     type: RollingUpdate
   template:
     metadata:
+      annotations:
         otus.project.postgres.instance/default: "true"
       labels:
         app: postgres-client
@@ -198,7 +199,7 @@ spec:
             command:
             - psql
             - -h
-            - postgres-db.default.svc.internal-cluster.local
+            - postgres-db
             - -U
             - postgres
             - -d
@@ -218,3 +219,13 @@ spec:
       schedulerName: default-scheduler
       securityContext: {}
       terminationGracePeriodSeconds: 3
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: pg-configs
+data:
+  pg_hba.conf: |
+    # TYPE  DATABASE        USER            ADDRESS                 METHOD
+    local   all             all                                     trust
+    host    all             all             10.111.0.0/16           trust
